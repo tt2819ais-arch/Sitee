@@ -1,0 +1,36 @@
+-- Create artists table
+CREATE TABLE public.artists (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Create tracks table
+CREATE TABLE public.tracks (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  artist_id UUID NOT NULL REFERENCES public.artists(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  file_url TEXT NOT NULL,
+  cover_url TEXT,
+  lyrics TEXT,
+  duration INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Insert the two artists
+INSERT INTO public.artists (name) VALUES ('@MaksimXyila'), ('@ar_got');
+
+-- Enable RLS
+ALTER TABLE public.artists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tracks ENABLE ROW LEVEL SECURITY;
+
+-- Public read access (anyone can view tracks)
+CREATE POLICY "Anyone can view artists" ON public.artists FOR SELECT USING (true);
+CREATE POLICY "Anyone can view tracks" ON public.tracks FOR SELECT USING (true);
+
+-- Create storage bucket for audio files
+INSERT INTO storage.buckets (id, name, public) VALUES ('tracks', 'tracks', true);
+
+-- Storage policies
+CREATE POLICY "Public access to track files" ON storage.objects FOR SELECT USING (bucket_id = 'tracks');
+CREATE POLICY "Service role can upload tracks" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'tracks');
